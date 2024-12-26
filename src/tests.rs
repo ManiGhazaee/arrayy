@@ -69,19 +69,15 @@ fn test_set_len() {
 #[test]
 fn test_buf() {
     let arr = array!(1, 2, 3);
-    unsafe {
-        let buf = arr.buf();
-        assert_eq!(buf, &[1, 2, 3]);
-    }
+    let buf = arr.buf();
+    assert_eq!(buf, &[1, 2, 3]);
 }
 
 #[test]
 fn test_buf_mut() {
     let mut arr = array!(1, 2, 3);
-    unsafe {
-        let buf_mut = arr.buf_mut();
-        buf_mut[0] = 4;
-    }
+    let buf_mut = arr.buf_mut();
+    buf_mut[0] = 4;
     assert_eq!(arr.get(0), Some(&4));
 }
 
@@ -287,4 +283,34 @@ fn test_into_iter() {
         assert_eq!(iter.next(), Some(3));
         assert_eq!(iter.next(), None);
     }
+}
+
+#[test]
+fn test_as_ref() {
+    let arr = array!(1, 2, 3);
+    let slice: &[i32] = arr.as_ref();
+    assert_eq!(slice, &[1, 2, 3]);
+}
+
+#[test]
+fn test_as_mut() {
+    let mut arr = array!(1, 2, 3);
+    let slice: &mut [i32] = arr.as_mut();
+    slice[0] = 4;
+    assert_eq!(arr, array!(4, 2, 3));
+}
+
+#[test]
+fn test_deref() {
+    let arr = array!(1, 2, 3);
+    let slice: &[i32] = &arr;
+    assert_eq!(slice, &[1, 2, 3]);
+}
+
+#[test]
+fn test_deref_mut() {
+    let mut arr = array!(1, 2, 3);
+    let slice: &mut [i32] = &mut arr;
+    slice[0] = 4;
+    assert_eq!(arr, array!(4, 2, 3));
 }

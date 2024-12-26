@@ -1,4 +1,9 @@
-use std::{fmt::Debug, mem, ops::Range, ptr};
+use std::{
+    fmt::Debug,
+    mem,
+    ops::{Deref, DerefMut, Range},
+    ptr,
+};
 
 mod tests;
 
@@ -18,30 +23,100 @@ impl<T: Default + Copy, const L: usize> Default for Array<T, L> {
 }
 
 impl<T: Copy + Default, const L: usize> Array<T, L> {
+    /// Returns the number of elements in the array.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let arr = array!(1, 2, 3);
+    /// assert_eq!(arr.len(), 3);
+    /// ```
     pub const fn len(&self) -> usize {
         self.len
     }
 
+    /// Sets the length of the array.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that `len` is less than or equal to the capacity of the array.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let mut arr = array!(i32; 5);
+    /// unsafe { arr.set_len(3) };
+    /// assert_eq!(arr.len(), 3);
+    /// ```
     pub unsafe fn set_len(&mut self, len: usize) {
         self.len = len;
     }
 
-    pub unsafe fn buf(&self) -> &[T; L] {
+    /// Returns a reference to the underlying buffer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let arr = array!(1, 2, 3; 5);
+    /// unsafe { assert_eq!(arr.buf(), &[1, 2, 3, 0, 0]) };
+    /// ```
+    pub const fn buf(&self) -> &[T; L] {
         &self.data
     }
 
-    pub unsafe fn buf_mut(&mut self) -> &mut [T; L] {
+    /// Returns a mutable reference to the underlying buffer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let mut arr = array!(i32; 5);
+    /// unsafe { arr.buf_mut()[0] = 1 };
+    /// assert_eq!(unsafe { arr.buf() }, &[1, 0, 0, 0, 0]);
+    /// ```
+    pub fn buf_mut(&mut self) -> &mut [T; L] {
         &mut self.data
     }
 
+    /// Returns the capacity of the array.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let arr = array!(i32; 5);
+    /// assert_eq!(arr.capacity(), 5);
+    /// ```
     pub const fn capacity(&self) -> usize {
         L
     }
 
+    /// Returns `true` if the array contains no elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let arr = array!(i32; 5);
+    /// assert!(arr.is_empty());
+    /// ```
     pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
+    /// Returns a reference to the element at the specified index, or `None` if out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let arr = array!(1, 2, 3);
+    /// assert_eq!(arr.get(1), Some(&2));
+    /// assert_eq!(arr.get(3), None);
+    /// ```
     pub fn get(&self, index: usize) -> Option<&T> {
         if index >= self.len {
             None
@@ -50,6 +125,18 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         }
     }
 
+    /// Returns a mutable reference to the element at the specified index, or `None` if out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let mut arr = array!(1, 2, 3);
+    /// if let Some(x) = arr.get_mut(1) {
+    ///     *x = 4;
+    /// }
+    /// assert_eq!(arr.get(1), Some(&4));
+    /// ```
     pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
         if index >= self.len {
             None
@@ -58,6 +145,19 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         }
     }
 
+    /// Returns a reference to the element at the specified index without bounds checking.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that `index` is within bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let arr = array!(1, 2, 3);
+    /// unsafe { assert_eq!(arr.get_unchecked(1), &2) };
+    /// ```
     pub unsafe fn get_unchecked(&self, index: usize) -> &T {
         self.data.get_unchecked(index)
     }
@@ -120,6 +220,21 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         self.data[0..self.len].iter_mut()
     }
 
+    /// Appends the elements of another array to the end of this array.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the combined length of both arrays exceeds the capacity of this array.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let mut arr1 = array!(1, 2, 3; 5);
+    /// let arr2 = array!(4, 5);
+    /// arr1.append(&arr2);
+    /// assert_eq!(arr1, array!(1, 2, 3, 4, 5));
+    /// ```
     pub fn append<const M: usize>(&mut self, other: &Array<T, M>) {
         if other.len > L - self.len {
             panic!()
@@ -128,38 +243,63 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         self.len += other.len;
     }
 
-    pub fn filter(self, mut predicate: impl FnMut(&T) -> bool) -> Self {
-        let mut copy = self;
-        let mut i = 0;
+    /// Filters the elements of the array, returning a new array with only the elements that match the predicate.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let arr = array!(1, 2, 3, 4, 5);
+    /// let filtered = arr.filter(|&x| x % 2 == 0);
+    /// assert_eq!(filtered, array!(2, 4));
+    /// ```
+    pub fn filter(mut self, mut predicate: impl FnMut(&T) -> bool) -> Self {
         let mut j = 0;
-        while i < self.len {
+        for i in 0..self.len {
             unsafe {
                 let elt = *self.data.get_unchecked(i);
                 if predicate(&elt) {
-                    *copy.data.get_unchecked_mut(j) = elt;
+                    *self.data.get_unchecked_mut(j) = elt;
                     j += 1;
                 }
             }
-            i += 1;
         }
-        copy.len = j;
-        copy
+        self.len = j;
+        self
     }
 
+    /// Applies a function to each element in the array, returning a new array with the results.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let arr = array!(1, 2, 3);
+    /// let mapped = arr.map(|&x| x * 2);
+    /// assert_eq!(mapped, array!(2, 4, 6));
+    /// ```
     pub fn map<X: Copy + Default>(self, mut f: impl FnMut(&T) -> X) -> Array<X, L> {
         let mut copy = Array::<X, L>::default();
-        let mut i = 0;
-        while i < self.len {
+        for i in 0..self.len {
             unsafe {
                 let elt = *self.data.get_unchecked(i);
                 *copy.get_unchecked_mut(i) = f(&elt);
             }
-            i += 1;
         }
-        copy.len = i;
+        copy.len = self.len;
         copy
     }
 
+    /// Truncates the array, keeping only the first `len` elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let mut arr = array!(1, 2, 3, 4, 5);
+    /// arr.truncate(3);
+    /// assert_eq!(arr, array!(1, 2, 3));
+    /// ```
     pub fn truncate(&mut self, len: usize) {
         if len > self.len {
             return;
@@ -179,6 +319,20 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         self.as_slice().to_vec()
     }
 
+    /// Inserts an element at the specified index, shifting all elements after it to the right.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the index is greater than the length of the array or if the array is at full capacity.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let mut arr = array!(1, 2, 3; 5);
+    /// arr.insert(1, 4);
+    /// assert_eq!(arr, array!(1, 4, 2, 3));
+    /// ```
     pub fn insert(&mut self, index: usize, element: T) {
         if index > self.len {
             panic!("insert index ({}) > len ({})", index, self.len);
@@ -198,6 +352,20 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         }
     }
 
+    /// Removes and returns the element at the specified index, shifting all elements after it to the left.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the index is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let mut arr = array!(1, 2, 3);
+    /// assert_eq!(arr.remove(1), 2);
+    /// assert_eq!(arr, array!(1, 3));
+    /// ```
     pub fn remove(&mut self, index: usize) -> T {
         let len = self.len;
         if index >= len {
@@ -215,6 +383,16 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         }
     }
 
+    /// Clears the array, removing all elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arrayy::array;
+    /// let mut arr = array!(1, 2, 3);
+    /// arr.clear();
+    /// assert_eq!(arr.len(), 0);
+    /// ```
     pub fn clear(&mut self) {
         self.len = 0;
     }
@@ -296,6 +474,44 @@ impl<T: Copy + Default + PartialEq, const L: usize, const X: usize> PartialEq<Ar
     }
 }
 
+impl<T, const L: usize> AsRef<Array<T, L>> for Array<T, L> {
+    fn as_ref(&self) -> &Array<T, L> {
+        self
+    }
+}
+
+impl<T: Copy + Default, const L: usize> AsRef<[T]> for Array<T, L> {
+    fn as_ref(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+
+impl<T, const L: usize> AsMut<Array<T, L>> for Array<T, L> {
+    fn as_mut(&mut self) -> &mut Array<T, L> {
+        self
+    }
+}
+
+impl<T: Copy + Default, const L: usize> AsMut<[T]> for Array<T, L> {
+    fn as_mut(&mut self) -> &mut [T] {
+        self.as_mut_slice()
+    }
+}
+
+impl<T: Copy + Default, const L: usize> Deref for Array<T, L> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
+    }
+}
+
+impl<T: Copy + Default, const L: usize> DerefMut for Array<T, L> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_mut_slice()
+    }
+}
+
 #[macro_export]
 macro_rules! count {
     ($e:expr) => {
@@ -308,6 +524,12 @@ macro_rules! count {
 
 #[macro_export]
 macro_rules! array {
+    () => {
+        $crate::Array::default()
+    };
+    ($ty:ty ;$cap:expr) => {
+        $crate::Array::<$ty, $cap>::default()
+    };
     (;$cap:expr) => {
         $crate::Array::<_, $cap>::default()
     };
