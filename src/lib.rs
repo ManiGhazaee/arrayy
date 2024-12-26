@@ -51,6 +51,9 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
     /// assert_eq!(arr.len(), 3);
     /// ```
     pub unsafe fn set_len(&mut self, len: usize) {
+        if len > L {
+            panic!("len ({}) > capacity ({})", len, L);
+        }
         self.len = len;
     }
 
@@ -339,6 +342,9 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         }
         if index == L {
             panic!("insert index ({}) == capacity ({})", index, L);
+        }
+        if self.len == L {
+            panic!("len ({}) == capacity ({})", self.len, L);
         }
         unsafe {
             {
