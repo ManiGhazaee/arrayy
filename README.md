@@ -1,6 +1,6 @@
 # arrayy
 
-Stack-allocated fixed-size array with useful methods like push & pop on top of Rust's `[T; L]` array.
+Stack-allocated fixed-size array with useful methods on top of Rust's `[T; L]` type.
 
 ## Methods
 
@@ -23,6 +23,7 @@ Stack-allocated fixed-size array with useful methods like push & pop on top of R
 - [`pop`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.pop)
 - [`iter`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.iter)
 - [`iter_mut`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.iter_mut)
+- [`into_iter`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.into_iter)
 - [`append`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.append)
 - [`filter`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.filter)
 - [`map`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.map)
@@ -37,7 +38,6 @@ Stack-allocated fixed-size array with useful methods like push & pop on top of R
 - [`as_ptr`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.as_ptr)
 - [`as_mut_ptr_range`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.as_mut_ptr_range)
 - [`as_ptr_range`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.as_ptr_range)
-- [`into_iter`](https://docs.rs/arrayy/latest/arrayy/struct.Array.html#method.into_iter)
 
 ## Examples
 
