@@ -2,5 +2,11 @@
 name = "arrayy"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/ManiGhazaee/arrayy"
+authors = ["ManiGhazaee <hosseinghazaee1@gmail.com>"]
+description = "Stack-allocated fixed-size array with useful methods like push & pop on top of Rust's `[T; L]` array."
+readme = "README.md
+license = "MIT"
+keywords = ["array", "data-structure"] 
 
 [dependencies]
