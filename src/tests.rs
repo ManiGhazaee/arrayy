@@ -45,6 +45,16 @@ fn test_general() {
 }
 
 #[test]
+fn test_new() {
+    let arr1 = Array::new([1, 2, 3]);
+    assert_eq!(arr1.len(), 3);
+    assert_eq!(arr1.capacity(), 3);
+    assert_eq!(arr1[0], 1);
+    assert_eq!(arr1[1], 2);
+    assert_eq!(arr1[2], 3);
+}
+
+#[test]
 fn test_insert() {
     let mut arr = array!(1, 2, 3; 10);
     arr.insert(3, 4);
@@ -181,6 +191,14 @@ fn test_append() {
 }
 
 #[test]
+fn test_append_slice() {
+    let mut arr1 = array!(1, 2, 3; 5);
+    let arr2 = [4, 5];
+    arr1.append_slice(&arr2);
+    assert_eq!(arr1, array!(1, 2, 3, 4, 5));
+}
+
+#[test]
 fn test_filter() {
     let arr = array!(1, 2, 3, 4, 5);
     let filtered = arr.filter(|&x| x % 2 == 0);
@@ -313,4 +331,29 @@ fn test_deref_mut() {
     let slice: &mut [i32] = &mut arr;
     slice[0] = 4;
     assert_eq!(arr, array!(4, 2, 3));
+}
+
+#[test]
+fn test_macro() {
+    let arr: Array<u8, 10> = array!();
+    assert_eq!(arr.len(), 0);
+    assert_eq!(arr.capacity(), 10);
+    let arr = array!(u8; 10);
+    assert_eq!(arr.len(), 0);
+    assert_eq!(arr.capacity(), 10);
+    let arr = array!(1; 10);
+    assert_eq!(arr.len(), 10);
+    assert_eq!(arr.capacity(), 10);
+    let arr = array!(0,; 10);
+    assert_eq!(arr.len(), 1);
+    assert_eq!(arr.capacity(), 10);
+    let arr: Array<u8, 10> = array!(; 10);
+    assert_eq!(arr.len(), 0);
+    assert_eq!(arr.capacity(), 10);
+    let arr = array!(1, 2, 3);
+    assert_eq!(arr.len(), 3);
+    assert_eq!(arr.capacity(), 3);
+    let arr = array!(1, 2, 3; 10);
+    assert_eq!(arr.len(), 3);
+    assert_eq!(arr.capacity(), 10);
 }

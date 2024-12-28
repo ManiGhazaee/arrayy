@@ -2,7 +2,7 @@ use std::{
     fmt::Debug,
     mem,
     ops::{Deref, DerefMut, Range},
-    ptr,
+    ptr::{self},
 };
 
 mod tests;
@@ -23,6 +23,10 @@ impl<T: Default + Copy, const L: usize> Default for Array<T, L> {
 }
 
 impl<T: Copy + Default, const L: usize> Array<T, L> {
+    pub const fn new(data: [T; L]) -> Self {
+        let len = L;
+        Self { data, len }
+    }
     /// Returns the number of elements in the array.
     ///
     /// # Examples
@@ -54,6 +58,10 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         if len > L {
             panic!("len ({}) > capacity ({})", len, L);
         }
+        self.len = len;
+    }
+
+    pub unsafe fn set_len_unchecked(&mut self, len: usize) {
         self.len = len;
     }
 
@@ -207,12 +215,22 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         self.len += 1;
     }
 
+    pub unsafe fn push_unchecked(&mut self, val: T) {
+        *self.data.get_unchecked_mut(self.len) = val;
+        self.len += 1;
+    }
+
     pub fn pop(&mut self) -> Option<T> {
         if self.len == 0 {
             return None;
         }
         self.len -= 1;
         Some(mem::take(self.data.get_mut(self.len).unwrap()))
+    }
+
+    pub unsafe fn pop_unchecked(&mut self) -> T {
+        self.len -= 1;
+        *self.data.get_unchecked(self.len)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {
@@ -244,6 +262,24 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         }
         self.data[self.len..self.len + other.len].copy_from_slice(&other.data[0..other.len]);
         self.len += other.len;
+    }
+
+    pub unsafe fn append_unchecked<const M: usize>(&mut self, other: &Array<T, M>) {
+        self.data[self.len..self.len + other.len].copy_from_slice(&other.data[0..other.len]);
+        self.len += other.len;
+    }
+
+    pub fn append_slice(&mut self, other: &[T]) {
+        if other.len() > L - self.len {
+            panic!()
+        }
+        self.data[self.len..self.len + other.len()].copy_from_slice(other);
+        self.len += other.len();
+    }
+
+    pub unsafe fn append_slice_unchecked(&mut self, other: &[T]) {
+        self.data[self.len..self.len + other.len()].copy_from_slice(other);
+        self.len += other.len();
     }
 
     /// Filters the elements of the array, returning a new array with only the elements that match the predicate.
@@ -358,6 +394,15 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
         }
     }
 
+    pub unsafe fn insert_unchecked(&mut self, index: usize, element: T) {
+        let p = self.data.as_mut_ptr().add(index);
+        if index < self.len {
+            ptr::copy(p, p.add(1), self.len - index);
+        }
+        ptr::write(p, element);
+        self.len += 1;
+    }
+
     /// Removes and returns the element at the specified index, shifting all elements after it to the left.
     ///
     /// # Panics
@@ -387,6 +432,16 @@ impl<T: Copy + Default, const L: usize> Array<T, L> {
             self.len -= 1;
             ret
         }
+    }
+
+    pub unsafe fn remove_unchecked(&mut self, index: usize) -> T {
+        let len = self.len;
+        let ret;
+        let ptr = self.as_mut_ptr().add(index);
+        ret = ptr::read(ptr);
+        ptr::copy(ptr.add(1), ptr, len - index - 1);
+        self.len -= 1;
+        ret
     }
 
     /// Clears the array, removing all elements.
@@ -536,6 +591,12 @@ macro_rules! array {
     ($ty:ty ;$cap:expr) => {
         $crate::Array::<$ty, $cap>::default()
     };
+    ($e:expr ;$cap:expr) => {
+        $crate::Array::<_, $cap>::new([$e; $cap])
+    };
+    ($e:expr, ;$cap:expr) => {
+        $crate::Array::<_, $cap>::from(&[$e])
+    };
     (;$cap:expr) => {
         $crate::Array::<_, $cap>::default()
     };
@@ -543,6 +604,6 @@ macro_rules! array {
         $crate::Array::<_, $cap>::from(&[$($es),+])
     };
     ($($es:expr),+) => {
-        $crate::Array::<_, { $crate::count!($($es),+) }>::from(&[$($es),+])
+        $crate::Array::<_, { $crate::count!($($es),+) }>::new([$($es),+])
     };
 }
